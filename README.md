@@ -128,12 +128,3 @@ if [ "$CURRENT_GATEWAY" = "10.15.16.1" ] || [ "$CURRENT_GATEWAY" = "OTRO_GATEWAY
 | `attendance.json` | Base de datos (se crea automáticamente) |
 | `tracker.log` | Historial de detecciones |
 | `error.log` | Errores del sistema |
-| `com.fuenmayo.office-tracker.plist` | Plantilla de configuración |
-
----
-
-## 💡 Uso en Nueva Computadora
-
-1. Copia la carpeta completa a la nueva Mac
-2. Ejecuta `./setup.sh`
-3. ¡Listo!
