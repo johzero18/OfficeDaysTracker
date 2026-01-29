@@ -8,7 +8,9 @@
 # Gateway de la oficina (BI-Mobile)
 OFFICE_GATEWAY="10.15.16.1"
 
-DATA_DIR="$HOME/Sites/control-oficina"
+# Obtener el directorio donde está este script
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+DATA_DIR="$SCRIPT_DIR"
 DATA_FILE="$DATA_DIR/attendance.json"
 LOG_FILE="$DATA_DIR/tracker.log"
 
