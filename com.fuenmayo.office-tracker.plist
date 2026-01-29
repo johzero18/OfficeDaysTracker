@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.fuenmayo.office-tracker</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/fuenmayo/Sites/control-oficina/check_wifi.sh</string>
+    </array>
+    
+    <!-- Ejecutar al cargar el agente (login) -->
+    <key>RunAtLoad</key>
+    <true/>
+    
+    <!-- Repetir cada 30 minutos (1800 segundos) -->
+    <key>StartInterval</key>
+    <integer>1800</integer>
+    
+    <!-- Log de errores -->
+    <key>StandardErrorPath</key>
+    <string>/Users/fuenmayo/Sites/control-oficina/error.log</string>
+    
+    <!-- Mantener vivo -->
+    <key>KeepAlive</key>
+    <false/>
+</dict>
+</plist>
