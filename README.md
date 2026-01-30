@@ -1,63 +1,92 @@
 # Office Attendance Tracker
 
-Sistema de tracking automático de asistencia a oficina basado en detección de red WiFi.
+Automated office attendance tracking system based on WiFi network detection.
+
+**Multi-platform support:**
+- 🍎 **macOS** → See [iOS/README.md](iOS/README.md)
+- 🪟 **Windows** → See [Windows/README.md](Windows/README.md)
 
 ---
 
-## 🚀 Instalación Rápida
+## 📁 Project Structure
 
-### 1. Descargar o clonar el proyecto
-Coloca los archivos en cualquier carpeta de tu computadora (por ejemplo: `~/office-tracker`)
+```
+control-oficina/
+├── iOS/                    # macOS version (LaunchAgent)
+│   ├── check_wifi.sh      # Detection script (Bash)
+│   ├── setup.sh           # Installation script
+│   ├── view_report.command # Dashboard launcher
+│   ├── show_attendance.sh # Terminal stats
+│   ├── report.html        # Web dashboard
+│   └── ...
+│
+├── Windows/               # Windows version (Task Scheduler)
+│   ├── check_wifi.ps1     # Detection script (PowerShell)
+│   ├── setup.bat          # Installation script
+│   ├── view_report.bat    # Dashboard launcher
+│   ├── report.html        # Web dashboard
+│   └── ...
+│
+└── README.md              # This file
+```
 
-### 2. Ejecutar setup
+---
+
+## 🚀 Quick Start
+
+### macOS
 ```bash
-cd ~/office-tracker  # O la carpeta donde colocaste los archivos
+cd iOS/
 ./setup.sh
 ```
+Then double-click `view_report.command`
 
-El script de setup hará:
-- ✅ Configurar permisos de ejecución
-- ✅ Crear la base de datos
-- ✅ Verificar la conexión de red
-- ✅ Probar el funcionamiento
-- ✅ Opcionalmente instalar ejecución automática
-
-### 3. ¡Listo!
-El sistema detectará automáticamente cuando estés conectado a la red de oficina (BI-Mobile) y registrará tu asistencia.
+### Windows
+1. Open `Windows\` folder
+2. Double-click `setup.bat`
+3. Follow instructions
+4. Double-click `view_report.bat` to view dashboard
 
 ---
 
-## 📊 Ver Estadísticas
+## 📊 Dashboard Features
 
-Ejecuta
-```bash
-./show_attendance.sh
-```
-
-Muestra:
-- 📅 Días totales de asistencia
-- 📆 Días del mes actual
-- 📈 Últimas asistencias registradas
+Both macOS and Windows versions include a web dashboard with:
+- 📊 Monthly progress toward 8 required days
+- 📅 Total days and current month summary
+- 🗓️ Next Argentina holiday (via API)
+- 📈 Monthly summaries with charts
+- 🕐 Last 10 attendance days
+- 🔄 **Auto-refresh every 30 seconds**
+- 🎨 Boehringer Ingelheim corporate branding
 
 ---
 
-## 🔧 Resolución de Problemas
+## 🔧 Configuration
 
-### El script no detecta la oficina
+### Change office gateway
 
-**Verificar el gateway actual:**
+**macOS**: Edit [iOS/check_wifi.sh](iOS/check_wifi.sh#L8)
 ```bash
-route -n get default | grep gateway
+OFFICE_GATEWAY="YOUR_GATEWAY_HERE"
 ```
 
-**Si el gateway es diferente a `10.15.16.1`:**
-1. Edita [check_wifi.sh](check_wifi.sh)
-2. Cambia la línea:
-   ```bash
-   OFFICE_GATEWAY="TU_GATEWAY_AQUI"
-   ```
+**Windows**: Edit [Windows/check_wifi.ps1](Windows/check_wifi.ps1#L8)
+```powershell
+$OFFICE_GATEWAY = "YOUR_GATEWAY_HERE"
+```
 
-### Ver logs de detección
+### View detection logs
+
+**macOS**:
+```bash
+tail -f iOS/tracker.log
+```
+
+**Windows**:
+```cmd
+notepad Windows\tracker.log
+```
 
 ```bash
 cat tracker.log
@@ -68,53 +97,148 @@ cat tracker.log
 ```bash
 ./check_wifi.sh
 cat attendance.json
+---
+
+## ✨ Features
+
+- ✅ **Automatic detection**: Detects office network via gateway (10.15.16.1)
+- ✅ **Multi-platform**: macOS (LaunchAgent) and Windows (Task Scheduler)
+- ✅ **Real-time dashboard**: Dynamic HTML with Boehringer Ingelheim branding
+- ✅ **Holidays API**: Uses ArgentinaDatos API for updated holidays
+- ✅ **Workday calculation**: Excludes weekends and holidays
+- ✅ **Portable**: Works in any folder without hardcoded paths
+- ✅ **No external database**: Uses simple JSON file
+
+---
+
+## 🔧 Troubleshooting
+
+### Dashboard doesn't load
+Make sure to double-click the launcher script (not open HTML directly).
+This starts a local web server needed to avoid CORS browser restrictions.
+
+**macOS**: `view_report.command`
+**Windows**: `view_report.bat`
+
+### Check current gateway
+
+**macOS**:
+```bash
+route -n get default | grep gateway
+```
+
+**Windows**:
+```cmd
+ipconfig | findstr "Gateway"
 ```
 
 ---
 
-## 🔍 Cómo Funciona
+## 🔍 How It Works
 
-1. **Detección automática**: El script verifica el gateway de red cada 30 minutos
-2. **Identificación**: Busca el gateway de la oficina (10.15.16.1 para BI-Mobile)
-3. **Registro único**: Guarda solo una entrada por día en `attendance.json`
-4. **Notificación**: Te avisa cuando registra tu asistencia
+1. **Automatic detection**: Script checks network gateway every 30 minutes
+2. **Identification**: Looks for office gateway (10.15.16.1 for BI-Mobile)
+3. **Unique registration**: Saves only one entry per day in `attendance.json`
+4. **Notification**: Alerts you when attendance is registered
+5. **Dynamic dashboard**: Reads JSON in real-time and displays updated stats
 
 ---
 
-## ⚙️ Configuración Avanzada
+## ⚙️ Advanced Configuration
 
-### Desactivar ejecución automática
+### Disable auto-execution
 
+**macOS**:
 ```bash
 launchctl unload ~/Library/LaunchAgents/com.office-tracker.plist
 ```
 
-### Activar ejecución automática
+**Windows**:
+```cmd
+schtasks /delete /tn "OfficeTracker" /f
+```
 
+### Enable auto-execution
+
+**macOS**:
 ```bash
 launchctl load ~/Library/LaunchAgents/com.office-tracker.plist
 ```
 
-### Cambiar frecuencia de verificación
+**Windows**:
+```cmd
+schtasks /create /tn "OfficeTracker" /tr "powershell -ExecutionPolicy Bypass -File C:\path\to\check_wifi.ps1" /sc minute /mo 30 /f
+```
 
-Edita el archivo plist en `~/Library/LaunchAgents/com.office-tracker.plist`:
+### Change check frequency
+
+**macOS**: Edit `~/Library/LaunchAgents/com.office-tracker.plist`:
 ```xml
 <key>StartInterval</key>
-<integer>1800</integer>  <!-- 1800 = 30 minutos -->
+<integer>1800</integer>  <!-- 1800 = 30 minutes -->
 ```
 
-Luego recarga:
+**Windows**: Modify task schedule:
+```cmd
+schtasks /create /tn "OfficeTracker" /tr "..." /sc minute /mo 15 /f
+```
+
+### Detect multiple office networks
+
+**macOS**: Edit [iOS/check_wifi.sh](iOS/check_wifi.sh):
 ```bash
-launchctl unload ~/Library/LaunchAgents/com.office-tracker.plist
-launchctl load ~/Library/LaunchAgents/com.office-tracker.plist
+if [ "$CURRENT_GATEWAY" = "10.15.16.1" ] || [ "$CURRENT_GATEWAY" = "OTHER_GATEWAY" ]; then
 ```
 
-### Detectar múltiples redes de oficina
-
-Edita [check_wifi.sh](check_wifi.sh) línea 37:
-```bash
-if [ "$CURRENT_GATEWAY" = "10.15.16.1" ] || [ "$CURRENT_GATEWAY" = "OTRO_GATEWAY" ]; then
+**Windows**: Edit [Windows/check_wifi.ps1](Windows/check_wifi.ps1):
+```powershell
+if ($gateway -eq "10.15.16.1" -or $gateway -eq "OTHER_GATEWAY") {
 ```
+
+---
+
+## 📝 Files
+
+### macOS (iOS folder)
+| File | Description |
+|------|-------------|
+| `setup.sh` | Automated installation script |
+| `check_wifi.sh` | Main network detection script |
+| `show_attendance.sh` | Terminal statistics viewer |
+| `view_report.command` | Web dashboard launcher |
+| `report.html` | Dynamic HTML dashboard |
+| `tracker.log` | Detection history |
+
+### Windows folder
+| File | Description |
+|------|-------------|
+| `setup.bat` | Automated installation script |
+| `check_wifi.ps1` | Main network detection script (PowerShell) |
+| `view_report.bat` | Web dashboard launcher |
+| `report.html` | Dynamic HTML dashboard |
+| `tracker.log` | Detection history |
+
+### Shared
+- `attendance.json` - Database (JSON)
+- `Boehringer_Logo_RGB_Accent-Green.svg` - Corporate logo
+
+---
+
+## 🌐 APIs Used
+
+- **ArgentinaDatos API**: `https://api.argentinadatos.com/v1/feriados/YYYY`
+  - Official Argentina holidays
+  - Includes fixed, movable, and tourist bridge holidays
+  - Automatic updates
+
+---
+
+## 🔒 Privacy
+
+- ✅ All data stored locally in `attendance.json`
+- ✅ No information sent to external servers
+- ✅ Only queries public holidays API (anonymous)
+- ✅ No credentials or authentication required
 
 ---
 
