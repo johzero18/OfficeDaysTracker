@@ -1,0 +1,17 @@
+.DS_Store
+
+# Build artifacts
+build/
+*.xcarchive
+*.app
+*.zip
+*.dmg
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+
+# Swift Package Manager
+.swiftpm/
+.build/

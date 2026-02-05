@@ -5,7 +5,9 @@ App nativa de macOS para controlar tu asistencia a la oficina mediante detecció
 ## Características
 
 - 🖥️ **App de barra de menú**: Se muestra en la barra superior de macOS
-- 🌐 **Detección automática de red**: Detecta el gateway de la red de la oficina (10.15.16.1) red BI-Mobile
+- 🌐 **Detección automática de red**: Detecta el gateway de la red de tu oficina
+- ⚙️ **Gateway configurable**: Personaliza la dirección IP del gateway de tu oficina
+- ⏱️ **Intervalo ajustable**: Configura cada cuánto tiempo verificar la conexión (de 1 minuto a 24 horas)
 - 📅 **Registro diario**: Registra automáticamente cada día que asistes a la oficina
 - 📊 **Meta mensual**: Muestra tu progreso hacia la meta de 8 días al mes
 - 🗓️ **Días hábiles restantes**: Calcula los días hábiles que quedan en el mes (excluyendo feriados de Argentina)
@@ -17,7 +19,19 @@ App nativa de macOS para controlar tu asistencia a la oficina mediante detecció
 
 ## Instalación
 
-### 📦 Instalación con DMG (Recomendado)
+### 🍺 Instalación con Homebrew (Recomendado)
+
+```bash
+brew tap TU_USUARIO/tap
+brew install --cask officedaystracker
+```
+
+Para actualizar:
+```bash
+brew upgrade --cask officedaystracker
+```
+
+### 📦 Instalación con DMG
 
 1. Descarga el archivo `OfficeDaysTracker-Installer.dmg`
 2. Abre el archivo DMG
@@ -40,14 +54,36 @@ App nativa de macOS para controlar tu asistencia a la oficina mediante detecció
    - **Progreso mensual**: Días asistidos vs meta (8 días/mes)
    - **Días hábiles restantes**: Cuántos días quedan en el mes
    - **Lista de días registrados**: Todos los días que asististe este mes
-3. Activa **"Iniciar al encender la PC"** para que la app se ejecute automáticamente
-4. La app verifica si estás conectado a la red de la oficina (gateway: 10.15.16.1)
-5. Haz clic en **Salir** cuando quieras cerrar la aplicación
+3. **🔄 Actualizar**: Fuerza la verificación del gateway inmediatamente sin esperar al intervalo programado
+4. **⚙️ Configuración**: Personaliza tu instalación
+   - Haz clic en **"Configuración"** en el menú
+   - Configura la dirección IP del gateway de tu oficina (por defecto: 10.15.16.1)
+   - Usa el botón **"Detectar"** para autodetectar el gateway actual
+   - Ajusta el intervalo de chequeo (desde 1 minuto hasta 24 horas)
+   - Usa los presets rápidos: 5 min, 15 min, 30 min, 1 hora
+5. Activa **"Iniciar al encender la PC"** para que la app se ejecute automáticamente
+6. La app verifica automáticamente si estás conectado a la red de la oficina según el intervalo configurado
+7. Haz clic en **Salir** cuando quieras cerrar la aplicación
 
 **Nota:** La app NO aparece en el Dock, solo en la barra de menú superior.
 
+**Intervalos recomendados:**
+- Para máxima precisión: 5-15 minutos
+- Para uso normal: 30-60 minutos (ahorro de batería)
+- Intervalos muy cortos (< 5 minutos) pueden consumir más batería
+
 ## Desinstalación
 
+### Con Homebrew
+```bash
+brew uninstall --cask officedaystracker
+```
+
+### Manual
 1. Arrastra **OfficeDaysTracker.app** desde la carpeta Aplicaciones a la Papelera
 2. Vacía la Papelera
 3. (Opcional) Elimina las preferencias: `~/Library/Preferences/com.officedaystracker.app.plist`
+
+## Desarrollo
+
+Para compilar y distribuir la app, consulta [HOMEBREW_SETUP.md](HOMEBREW_SETUP.md)
