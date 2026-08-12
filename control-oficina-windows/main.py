@@ -6,7 +6,8 @@ from PySide6.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QMessageBox
 from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor, QPen, QFont, QAction
 from PySide6.QtCore import Qt, QTimer
 
-from attendance_manager import AttendanceManager, MONTHLY_GOAL
+from attendance_manager import AttendanceManager
+import i18n
 from ui.main_popup import MainPopup
 from ui.settings_dialog import SettingsDialog
 
@@ -60,23 +61,30 @@ class App:
 
         menu = QMenu()
 
-        show_action = QAction("Mostrar", None)
-        show_action.triggered.connect(self._show_popup)
-        menu.addAction(show_action)
+        self._show_action = QAction("", None)
+        self._show_action.triggered.connect(self._show_popup)
+        menu.addAction(self._show_action)
 
-        settings_action = QAction("\u2699 Configuración", None)
-        settings_action.triggered.connect(self._show_settings)
-        menu.addAction(settings_action)
+        self._settings_action = QAction("", None)
+        self._settings_action.triggered.connect(self._show_settings)
+        menu.addAction(self._settings_action)
 
         menu.addSeparator()
 
-        quit_action = QAction("\u23FB Salir", None)
-        quit_action.triggered.connect(self._quit)
-        menu.addAction(quit_action)
+        self._quit_action = QAction("", None)
+        self._quit_action.triggered.connect(self._quit)
+        menu.addAction(self._quit_action)
+
+        self._apply_language()
 
         self._tray.setContextMenu(menu)
         self._tray.activated.connect(self._on_tray_activated)
         self._tray.show()
+
+    def _apply_language(self):
+        self._show_action.setText(i18n.t("menu_show"))
+        self._settings_action.setText(f"\u2699 {i18n.t('menu_settings')}")
+        self._quit_action.setText(f"\u23FB {i18n.t('menu_quit')}")
 
     def _setup_timer(self):
         self._timer = QTimer()
@@ -110,9 +118,10 @@ class App:
             and self._goal_notified_date != date.today()
         ):
             self._goal_notified_date = date.today()
+            self._apply_language()
             self._tray.showMessage(
                 "Office Days Tracker",
-                f"\u2B50 ¡Meta cumplida! ({MONTHLY_GOAL} días este mes)",
+                i18n.t("goal_message", n=self._manager.monthly_goal),
                 QSystemTrayIcon.MessageIcon.Information,
                 5000,
             )

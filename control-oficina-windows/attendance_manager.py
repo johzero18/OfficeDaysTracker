@@ -7,6 +7,7 @@ from utils.network import get_default_gateway
 from utils.storage import get, set_val, load_data, save_data
 from utils.holidays import get_holidays_for_month
 from utils.autostart import is_autostart_enabled, set_autostart
+import i18n
 
 
 MONTHLY_GOAL = 8
@@ -14,6 +15,8 @@ RECORDS_KEY = "attendance_records"
 GATEWAY_KEY = "office_gateway"
 INTERVAL_KEY = "check_interval"
 LAUNCH_KEY = "launch_at_login"
+GOAL_KEY = "monthly_goal"
+LANG_KEY = "language"
 DEFAULT_GATEWAY = "10.15.16.1"
 DEFAULT_INTERVAL = 3600
 
@@ -29,6 +32,8 @@ class AttendanceManager(QObject):
         self._workdays_remaining = 0
         self._office_gateway = DEFAULT_GATEWAY
         self._check_interval = DEFAULT_INTERVAL
+        self._monthly_goal = MONTHLY_GOAL
+        self._language = "es"
         self._current_gateway: str | None = None
         self._holidays: list[str] = []
         self._records_cache: list[dict] | None = None
@@ -43,6 +48,9 @@ class AttendanceManager(QObject):
         data = load_data()
         self._office_gateway = data.get(GATEWAY_KEY, DEFAULT_GATEWAY)
         self._check_interval = data.get(INTERVAL_KEY, DEFAULT_INTERVAL)
+        self._monthly_goal = data.get(GOAL_KEY, MONTHLY_GOAL)
+        self._language = data.get(LANG_KEY, "es")
+        i18n.set_language(self._language)
 
     def _load_holidays(self):
         now = datetime.now()
@@ -93,15 +101,35 @@ class AttendanceManager(QObject):
 
     @property
     def progress_percentage(self) -> float:
-        return min(self._days_this_month / MONTHLY_GOAL, 1.0)
+        return min(self._days_this_month / self._monthly_goal, 1.0)
 
     @property
     def goal_reached(self) -> bool:
-        return self._days_this_month >= MONTHLY_GOAL
+        return self._days_this_month >= self._monthly_goal
 
     @property
     def days_remaining(self) -> int:
-        return max(MONTHLY_GOAL - self._days_this_month, 0)
+        return max(self._monthly_goal - self._days_this_month, 0)
+
+    @property
+    def monthly_goal(self) -> int:
+        return self._monthly_goal
+
+    @monthly_goal.setter
+    def monthly_goal(self, value: int):
+        self._monthly_goal = max(1, min(31, int(value)))
+        set_val(GOAL_KEY, self._monthly_goal)
+
+    @property
+    def language(self) -> str:
+        return self._language
+
+    @language.setter
+    def language(self, value: str):
+        self._language = value if value in ("es", "en") else "es"
+        set_val(LANG_KEY, self._language)
+        i18n.set_language(self._language)
+        self.state_changed.emit()
 
     @property
     def launch_at_login(self) -> bool:
@@ -181,6 +209,47 @@ class AttendanceManager(QObject):
             ],
             key=lambda r: r["date"],
         )
+
+    def add_record(self, day: date) -> bool:
+        records = [dict(r) for r in self._load_all_records()]
+        day_str = day.isoformat()
+        if any(r["date"] == day_str for r in records):
+            return False
+        records.append({"id": str(uuid.uuid4()), "date": day_str})
+        records.sort(key=lambda r: r["date"])
+        self._save_records(records)
+        self._load_month_data()
+        self.state_changed.emit()
+        return True
+
+    def remove_record(self, record_id: str) -> bool:
+        records = [dict(r) for r in self._load_all_records()]
+        filtered = [r for r in records if r["id"] != record_id]
+        if len(filtered) == len(records):
+            return False
+        self._save_records(filtered)
+        self._load_month_data()
+        self.state_changed.emit()
+        return True
+
+    def edit_record(self, record_id: str, new_day: date) -> bool:
+        records = [dict(r) for r in self._load_all_records()]
+        day_str = new_day.isoformat()
+        found = False
+        for r in records:
+            if r["id"] == record_id:
+                if any(x["date"] == day_str and x["id"] != record_id for x in records):
+                    return False
+                r["date"] = day_str
+                found = True
+                break
+        if not found:
+            return False
+        records.sort(key=lambda r: r["date"])
+        self._save_records(records)
+        self._load_month_data()
+        self.state_changed.emit()
+        return True
 
     def _is_holiday(self, d: date) -> bool:
         return d.isoformat() in self._holidays

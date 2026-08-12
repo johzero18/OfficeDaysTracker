@@ -1,18 +1,14 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QProgressBar, QGridLayout, QFrame, QCheckBox, QSizePolicy,
+    QApplication,
 )
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, QEvent
 from PySide6.QtGui import QFont, QAction, QIcon, QPixmap, QPainter, QColor, QPen
 
-from datetime import datetime
+from datetime import datetime, date
 
-from attendance_manager import MONTHLY_GOAL
-
-MONTH_NAMES_ES = [
-    "", "enero", "febrero", "marzo", "abril", "mayo", "junio",
-    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
-]
+import i18n
 
 
 def _make_section(title="") -> tuple[QFrame, QVBoxLayout]:
@@ -34,13 +30,14 @@ class MainPopup(QWidget):
         self._manager = manager
         self._on_settings_saved = on_settings_saved
         self.setWindowFlags(
-            Qt.WindowType.FramelessWindowHint
+            Qt.WindowType.Popup
             | Qt.WindowType.WindowStaysOnTopHint
             | Qt.WindowType.Tool
         )
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, False)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
         self.setFixedWidth(350)
+        QApplication.instance().installEventFilter(self)
 
         self._build_ui()
         self._connect_signals()
@@ -129,6 +126,22 @@ class MainPopup(QWidget):
             #btnQuit:hover {
                 background: #ffe0e0;
             }
+            #btnManual {
+                font-size: 11px;
+                padding: 4px 10px;
+                border: 1px solid #2e7d32;
+                border-radius: 4px;
+                background: #e8f5e9;
+                color: #2e7d32;
+            }
+            #btnManual:hover {
+                background: #c8e6c9;
+            }
+            #btnManual:disabled {
+                background: #f0f0f0;
+                border-color: #ccc;
+                color: #999;
+            }
             #headerBtn {
                 border: none;
                 background: transparent;
@@ -172,17 +185,15 @@ class MainPopup(QWidget):
 
         hdr.addSpacing(6)
 
-        min_btn = QPushButton("\u2013")
-        min_btn.setObjectName("headerBtn")
-        min_btn.setToolTip("Minimizar")
-        min_btn.clicked.connect(self.hide)
-        hdr.addWidget(min_btn)
+        self._min_btn = QPushButton("\u2013")
+        self._min_btn.setObjectName("headerBtn")
+        self._min_btn.clicked.connect(self.hide)
+        hdr.addWidget(self._min_btn)
 
-        close_btn = QPushButton("\u2715")
-        close_btn.setObjectName("headerBtn")
-        close_btn.setToolTip("Cerrar")
-        close_btn.clicked.connect(self.close)
-        hdr.addWidget(close_btn)
+        self._close_btn = QPushButton("\u2715")
+        self._close_btn.setObjectName("headerBtn")
+        self._close_btn.clicked.connect(self.close)
+        hdr.addWidget(self._close_btn)
 
         root.addWidget(header)
 
@@ -191,9 +202,9 @@ class MainPopup(QWidget):
         row = QHBoxLayout()
         left = QVBoxLayout()
         left.setSpacing(2)
-        lbl = QLabel("Estado actual")
-        lbl.setObjectName("smallText")
-        left.addWidget(lbl)
+        self._status_title = QLabel("")
+        self._status_title.setObjectName("smallText")
+        left.addWidget(self._status_title)
         self._status_text = QLabel("—")
         self._status_text.setObjectName("bigText")
         left.addWidget(self._status_text)
@@ -213,9 +224,9 @@ class MainPopup(QWidget):
         row.addWidget(self._today_icon)
         left = QVBoxLayout()
         left.setSpacing(0)
-        lbl = QLabel("Hoy")
-        lbl.setObjectName("smallText")
-        left.addWidget(lbl)
+        self._today_title = QLabel("")
+        self._today_title.setObjectName("smallText")
+        left.addWidget(self._today_title)
         self._today_text = QLabel("—")
         self._today_text.setObjectName("subText")
         left.addWidget(self._today_text)
@@ -259,9 +270,9 @@ class MainPopup(QWidget):
         row.addWidget(clock_icon)
         left = QVBoxLayout()
         left.setSpacing(0)
-        lbl = QLabel("Días hábiles restantes")
-        lbl.setObjectName("smallText")
-        left.addWidget(lbl)
+        self._workdays_title = QLabel("")
+        self._workdays_title.setObjectName("smallText")
+        left.addWidget(self._workdays_title)
         self._workdays_label = QLabel("—")
         self._workdays_label.setObjectName("subText")
         left.addWidget(self._workdays_label)
@@ -272,9 +283,9 @@ class MainPopup(QWidget):
 
         # ── Días registrados ──
         sec, lay = _make_section()
-        lbl = QLabel("Días registrados")
-        lbl.setObjectName("sectionTitle")
-        lay.addWidget(lbl)
+        self._days_title = QLabel("")
+        self._days_title.setObjectName("sectionTitle")
+        lay.addWidget(self._days_title)
         self._days_grid = QGridLayout()
         self._days_grid.setSpacing(6)
         lay.addLayout(self._days_grid)
@@ -290,30 +301,47 @@ class MainPopup(QWidget):
         ftr.setContentsMargins(12, 6, 12, 6)
         ftr.setSpacing(6)
 
-        self._autostart_cb = QCheckBox("Iniciar al encender la PC")
+        self._autostart_cb = QCheckBox("")
         ftr.addWidget(self._autostart_cb)
 
         btn_row = QHBoxLayout()
         btn_row.setSpacing(6)
 
-        settings_btn = QPushButton("\u2699 Configuración")
-        settings_btn.setObjectName("btn")
-        settings_btn.clicked.connect(self._on_settings)
-        btn_row.addWidget(settings_btn)
+        self._settings_btn = QPushButton("")
+        self._settings_btn.setObjectName("btn")
+        self._settings_btn.clicked.connect(self._on_settings)
+        btn_row.addWidget(self._settings_btn)
 
-        refresh_btn = QPushButton("\u21BB Actualizar")
-        refresh_btn.setObjectName("btn")
-        refresh_btn.clicked.connect(self._on_refresh)
-        btn_row.addWidget(refresh_btn)
+        self._records_btn = QPushButton("")
+        self._records_btn.setObjectName("btn")
+        self._records_btn.clicked.connect(self._on_records)
+        btn_row.addWidget(self._records_btn)
 
         btn_row.addStretch()
 
-        quit_btn = QPushButton("\u23FB Salir")
-        quit_btn.setObjectName("btnQuit")
-        quit_btn.clicked.connect(self._on_quit)
-        btn_row.addWidget(quit_btn)
+        self._refresh_btn = QPushButton("")
+        self._refresh_btn.setObjectName("btn")
+        self._refresh_btn.clicked.connect(self._on_refresh)
+        btn_row.addWidget(self._refresh_btn)
 
         ftr.addLayout(btn_row)
+
+        btn_row2 = QHBoxLayout()
+        btn_row2.setSpacing(6)
+
+        self._manual_btn = QPushButton("")
+        self._manual_btn.setObjectName("btnManual")
+        self._manual_btn.clicked.connect(self._on_manual_today)
+        btn_row2.addWidget(self._manual_btn)
+
+        btn_row2.addStretch()
+
+        self._quit_btn = QPushButton("")
+        self._quit_btn.setObjectName("btnQuit")
+        self._quit_btn.clicked.connect(self._on_quit)
+        btn_row2.addWidget(self._quit_btn)
+
+        ftr.addLayout(btn_row2)
         root.addWidget(footer)
 
         # ── Bordes redondeados ──
@@ -331,12 +359,13 @@ class MainPopup(QWidget):
 
     def _refresh(self):
         m = self._manager
+        self._apply_language()
 
         self._status_dot.setStyleSheet(
             f"color: {'#2e7d32' if m.is_connected else '#c62828'}; font-size: 16px;"
         )
         self._status_text.setText(
-            "En la oficina \U0001F3E2" if m.is_connected else "Fuera de la oficina \U0001F3E0"
+            f"{i18n.t('status_office')} \U0001F3E2" if m.is_connected else f"{i18n.t('status_away')} \U0001F3E0"
         )
         self._status_text.setStyleSheet(
             f"font-size: 18px; font-weight: 600; color: {'#2e7d32' if m.is_connected else '#555'};"
@@ -345,21 +374,20 @@ class MainPopup(QWidget):
 
         if m.today_registered:
             self._today_icon.setText("\U0001F511")
-            self._today_text.setText("Registrado \u2713")
+            self._today_text.setText(f"{i18n.t('registered')} \u2713")
             self._today_text.setStyleSheet("font-size: 13px; font-weight: 500; color: #2e7d32;")
         else:
             self._today_icon.setText("\U0001F512")
-            self._today_text.setText("Sin registrar")
+            self._today_text.setText(i18n.t("not_registered"))
             self._today_text.setStyleSheet("font-size: 13px; font-weight: 500; color: #888;")
 
         now = datetime.now()
-        month_name = MONTH_NAMES_ES[now.month]
-        self._month_label.setText(f"{month_name} {now.year}".capitalize())
+        self._month_label.setText(f"{i18n.month_name(now.month)} {now.year}".capitalize())
 
         count = m.days_this_month
-        total = MONTHLY_GOAL
+        total = m.monthly_goal
         color = "#2e7d32" if m.goal_reached else "#000"
-        self._count_label.setText(f"{count} / {total} días")
+        self._count_label.setText(f"{count} / {total} {i18n.t('days')}")
         self._count_label.setStyleSheet(f"font-weight: 700; font-size: 13px; color: {color};")
 
         self._progress.setValue(int(m.progress_percentage * 100))
@@ -374,16 +402,33 @@ class MainPopup(QWidget):
         """)
 
         if m.goal_reached:
-            self._goal_label.setText("\u2B50 \u00A1Meta cumplida!")
+            self._goal_label.setText(f"\u2B50 {i18n.t('goal_reached')}")
             self._goal_label.setStyleSheet("font-size: 11px; color: #2e7d32;")
         else:
-            self._goal_label.setText(f"Faltan {m.days_remaining} días para la meta")
+            self._goal_label.setText(i18n.t("days_to_goal", n=m.days_remaining))
             self._goal_label.setStyleSheet("font-size: 11px; color: #888;")
 
-        self._workdays_label.setText(f"{m.workdays_remaining} días")
+        self._workdays_label.setText(f"{m.workdays_remaining} {i18n.t('days')}")
 
         self._refresh_days_grid()
         self._autostart_cb.setChecked(m.launch_at_login)
+        self._manual_btn.setEnabled(not m.today_registered)
+
+    def _apply_language(self):
+        self._status_title.setText(i18n.t("status_current"))
+        self._today_title.setText(i18n.t("today"))
+        self._workdays_title.setText(i18n.t("workdays_remaining"))
+        self._days_title.setText(i18n.t("registered_days"))
+        self._autostart_cb.setText(i18n.t("autostart"))
+        self._settings_btn.setText(f"\u2699 {i18n.t('settings')}")
+        self._records_btn.setText(f"\u270E {i18n.t('records')}")
+        self._records_btn.setToolTip(i18n.t("records_tooltip"))
+        self._refresh_btn.setText(f"\u21BB {i18n.t('refresh')}")
+        self._manual_btn.setText(f"\u2705 {i18n.t('register_today')}")
+        self._manual_btn.setToolTip(i18n.t("register_today_tooltip"))
+        self._quit_btn.setText(f"\u23FB {i18n.t('quit')}")
+        self._min_btn.setToolTip(i18n.t("minimize"))
+        self._close_btn.setToolTip(i18n.t("close"))
 
     def _refresh_days_grid(self):
         while self._days_grid.count():
@@ -393,7 +438,7 @@ class MainPopup(QWidget):
 
         records = self._manager.get_records_for_current_month()
         if not records:
-            lbl = QLabel("No hay registros este mes")
+            lbl = QLabel(i18n.t("no_records_month"))
             lbl.setObjectName("smallText")
             lbl.setStyleSheet("font-style: italic;")
             self._days_grid.addWidget(lbl, 0, 0)
@@ -401,8 +446,7 @@ class MainPopup(QWidget):
 
         for i, rec in enumerate(records):
             dt = datetime.fromisoformat(rec["date"])
-            day_text = dt.strftime("%d %b")
-            lbl = QLabel(day_text)
+            lbl = QLabel(f"{dt.day} {i18n.month_name(dt.month)[:3]}")
             lbl.setObjectName("dayTag")
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             lbl.setStyleSheet(
@@ -417,6 +461,14 @@ class MainPopup(QWidget):
             self._manager.state_changed.emit()
             if self._on_settings_saved:
                 self._on_settings_saved()
+
+    def _on_records(self):
+        from .records_dialog import RecordsDialog
+        dlg = RecordsDialog(self._manager, self)
+        dlg.exec()
+
+    def _on_manual_today(self):
+        self._manager.add_record(date.today())
 
     def _on_refresh(self):
         self._manager.refresh()
@@ -442,6 +494,13 @@ class MainPopup(QWidget):
     def focusOutEvent(self, event):
         self.close()
         super().focusOutEvent(event)
+
+    def eventFilter(self, obj, event):
+        if self.isVisible() and event.type() == QEvent.Type.MouseButtonPress:
+            pos = event.globalPosition().toPoint()
+            if not self.geometry().contains(pos):
+                self.close()
+        return super().eventFilter(obj, event)
 
     def mousePressEvent(self, event):
         self._drag_pos = event.globalPosition().toPoint()
