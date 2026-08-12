@@ -7,6 +7,8 @@ from PySide6.QtGui import QFont, QAction, QIcon, QPixmap, QPainter, QColor, QPen
 
 from datetime import datetime
 
+from attendance_manager import MONTHLY_GOAL
+
 MONTH_NAMES_ES = [
     "", "enero", "febrero", "marzo", "abril", "mayo", "junio",
     "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",

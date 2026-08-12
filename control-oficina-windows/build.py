@@ -19,6 +19,9 @@ DIST = HERE / "dist"
 
 
 def build(onefile: bool = True):
+    # Asegurar que la carpeta resources exista (PyInstaller falla si no)
+    (HERE / "resources").mkdir(parents=True, exist_ok=True)
+
     # Limpiar builds anteriores
     for d in [HERE / "build", DIST]:
         if d.exists():
