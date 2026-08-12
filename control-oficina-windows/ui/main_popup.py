@@ -185,6 +185,11 @@ class MainPopup(QWidget):
 
         hdr.addSpacing(6)
 
+        self._help_btn = QPushButton("?")
+        self._help_btn.setObjectName("headerBtn")
+        self._help_btn.clicked.connect(self._on_help)
+        hdr.addWidget(self._help_btn)
+
         self._min_btn = QPushButton("\u2013")
         self._min_btn.setObjectName("headerBtn")
         self._min_btn.clicked.connect(self.hide)
@@ -427,6 +432,7 @@ class MainPopup(QWidget):
         self._manual_btn.setText(f"\u2705 {i18n.t('register_today')}")
         self._manual_btn.setToolTip(i18n.t("register_today_tooltip"))
         self._quit_btn.setText(f"\u23FB {i18n.t('quit')}")
+        self._help_btn.setToolTip(i18n.t("help"))
         self._min_btn.setToolTip(i18n.t("minimize"))
         self._close_btn.setToolTip(i18n.t("close"))
 
@@ -469,6 +475,10 @@ class MainPopup(QWidget):
 
     def _on_manual_today(self):
         self._manager.add_record(date.today())
+
+    def _on_help(self):
+        from .info_dialog import InfoDialog
+        InfoDialog(self).exec()
 
     def _on_refresh(self):
         self._manager.refresh()

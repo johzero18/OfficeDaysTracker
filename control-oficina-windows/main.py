@@ -69,6 +69,10 @@ class App:
         self._settings_action.triggered.connect(self._show_settings)
         menu.addAction(self._settings_action)
 
+        self._help_action = QAction("", None)
+        self._help_action.triggered.connect(self._show_help)
+        menu.addAction(self._help_action)
+
         menu.addSeparator()
 
         self._quit_action = QAction("", None)
@@ -84,7 +88,12 @@ class App:
     def _apply_language(self):
         self._show_action.setText(i18n.t("menu_show"))
         self._settings_action.setText(f"\u2699 {i18n.t('menu_settings')}")
+        self._help_action.setText(f"\u2139 {i18n.t('help')}")
         self._quit_action.setText(f"\u23FB {i18n.t('menu_quit')}")
+
+    def _show_help(self):
+        from ui.info_dialog import InfoDialog
+        InfoDialog(None).exec()
 
     def _setup_timer(self):
         self._timer = QTimer()

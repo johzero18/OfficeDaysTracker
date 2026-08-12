@@ -72,6 +72,23 @@ _T = {
         "exists_title": "Ya existe",
         "confirm_delete": "¿Eliminar el registro del {date}?",
         "confirm": "Confirmar",
+        "help": "Ayuda",
+        "help_title": "Cómo usar la app",
+        "ok": "Entendido",
+        "help_body": (
+            "Office Days Tracker registra automáticamente los días que venís a la oficina, "
+            "detectando la red a la que estás conectado.\n\n"
+            "• ¿Cómo funciona? La app verifica periódicamente si estás conectado al gateway "
+            "de tu oficina. Si es así, registra el día.\n"
+            "• Gateway: en Configuración, tocá “Detectar” para cargar el gateway actual y "
+            "verificá que coincida con el de tu oficina.\n"
+            "• Registro manual: si la detección no funciona, usá el botón “Registrar hoy”.\n"
+            "• Corregir días: el botón “Días” te permite agregar, cambiar la fecha o "
+            "eliminar registros.\n"
+            "• Intervalo y meta: configurá cada cuánto revisar la conexión y la meta "
+            "mensual en Configuración.\n\n"
+            "La app queda en la bandeja del sistema; hacé clic en el ícono para abrirla."
+        ),
     },
     "en": {
         "menu_show": "Show",
@@ -131,6 +148,23 @@ _T = {
         "exists_title": "Already exists",
         "confirm_delete": "Delete the record for {date}?",
         "confirm": "Confirm",
+        "help": "Help",
+        "help_title": "How to use the app",
+        "ok": "OK",
+        "help_body": (
+            "Office Days Tracker automatically records the days you come to the office by "
+            "detecting the network you are connected to.\n\n"
+            "• How it works: the app periodically checks whether you are connected to your "
+            "office gateway. If so, it registers the day.\n"
+            "• Gateway: in Settings, tap “Detect” to load the current gateway and check it "
+            "matches your office one.\n"
+            "• Manual entry: if detection fails, use the “Register today” button.\n"
+            "• Fix days: the “Days” button lets you add, change the date of, or delete "
+            "records.\n"
+            "• Interval and goal: set how often to check the connection and the monthly "
+            "goal in Settings.\n\n"
+            "The app lives in the system tray; click the icon to open it."
+        ),
     },
 }
 

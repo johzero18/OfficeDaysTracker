@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QSpinBox, QComboBox, QFrame, QMessageBox, QWidget,
+    QScrollArea,
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
@@ -48,8 +49,8 @@ class SettingsDialog(QDialog):
             | Qt.WindowType.WindowCloseButtonHint
             | Qt.WindowType.WindowStaysOnTopHint
         )
-        self.setMinimumSize(520, 640)
-        self.resize(540, 660)
+        self.setMinimumSize(520, 420)
+        self.resize(540, 620)
         self.setModal(True)
 
         self._gateway_input = QLineEdit()
@@ -72,7 +73,6 @@ class SettingsDialog(QDialog):
                 background: #f7f7f7;
                 border: 1px solid #e0e0e0;
                 border-radius: 6px;
-                padding: 12px;
             }
             #sectionTitle {
                 font-size: 14px;
@@ -129,10 +129,25 @@ class SettingsDialog(QDialog):
         title.setStyleSheet("font-size: 16px; font-weight: 600;")
         h.addWidget(title)
         h.addStretch()
+
+        help_btn = QPushButton("?")
+        help_btn.setStyleSheet(
+            "border: none; background: transparent; font-size: 16px; color: #555; padding: 0 6px;"
+        )
+        help_btn.setToolTip(i18n.t("help"))
+        help_btn.clicked.connect(self._on_help)
+        h.addWidget(help_btn)
+
         root.addWidget(hdr)
 
-        # ── Body ──
-        body = QVBoxLayout()
+        # ── Body (scrollable) ──
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setStyleSheet("QScrollArea { background: #fff; border: none; }")
+
+        container = QWidget()
+        body = QVBoxLayout(container)
         body.setContentsMargins(16, 12, 16, 12)
         body.setSpacing(16)
 
@@ -140,6 +155,7 @@ class SettingsDialog(QDialog):
         gw_frame = QFrame()
         gw_frame.setObjectName("section")
         gw_lay = QVBoxLayout(gw_frame)
+        gw_lay.setContentsMargins(12, 12, 12, 12)
         gw_lay.setSpacing(6)
 
         gw_title = QLabel(f"\U0001F310 {i18n.t('gateway_section')}")
@@ -173,6 +189,7 @@ class SettingsDialog(QDialog):
         iv_frame = QFrame()
         iv_frame.setObjectName("section")
         iv_lay = QVBoxLayout(iv_frame)
+        iv_lay.setContentsMargins(12, 12, 12, 12)
         iv_lay.setSpacing(6)
 
         iv_title = QLabel(f"\u23F0 {i18n.t('interval_section')}")
@@ -214,6 +231,7 @@ class SettingsDialog(QDialog):
         gl_frame = QFrame()
         gl_frame.setObjectName("section")
         gl_lay = QVBoxLayout(gl_frame)
+        gl_lay.setContentsMargins(12, 12, 12, 12)
         gl_lay.setSpacing(6)
 
         gl_title = QLabel(f"\U0001F3C6 {i18n.t('goal_section')}")
@@ -240,6 +258,7 @@ class SettingsDialog(QDialog):
         lg_frame = QFrame()
         lg_frame.setObjectName("section")
         lg_lay = QVBoxLayout(lg_frame)
+        lg_lay.setContentsMargins(12, 12, 12, 12)
         lg_lay.setSpacing(6)
 
         lg_title = QLabel(f"\U0001F1FA\U0001F1F8/\U0001F1EA\U0001F1F8 {i18n.t('language_section')}")
@@ -263,7 +282,8 @@ class SettingsDialog(QDialog):
 
         body.addWidget(lg_frame)
         body.addStretch()
-        root.addLayout(body)
+        scroll.setWidget(container)
+        root.addWidget(scroll, 1)
 
         # ── Footer ──
         ftr = QFrame()
@@ -289,6 +309,10 @@ class SettingsDialog(QDialog):
         f.addWidget(save_btn)
 
         root.addWidget(ftr)
+
+    def _on_help(self):
+        from .info_dialog import InfoDialog
+        InfoDialog(self).exec()
 
     def _preset_btn(self, minutes: int) -> QPushButton:
         label = f"{minutes} min" if minutes < 60 else f"{minutes // 60} h"
