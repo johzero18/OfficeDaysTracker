@@ -18,7 +18,8 @@ class SettingsDialog(QDialog):
             | Qt.WindowType.WindowCloseButtonHint
             | Qt.WindowType.WindowStaysOnTopHint
         )
-        self.setFixedSize(480, 420)
+        self.setMinimumSize(500, 500)
+        self.resize(520, 520)
         self.setModal(True)
 
         self._gateway_input = QLineEdit()

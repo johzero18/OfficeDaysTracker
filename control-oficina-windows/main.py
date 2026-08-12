@@ -1,5 +1,6 @@
 import sys
 import os
+from datetime import date
 
 from PySide6.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QMessageBox
 from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor, QPen, QFont, QAction
@@ -42,10 +43,12 @@ class App:
 
         self._manager = AttendanceManager()
 
-        self._popup = MainPopup(self._manager)
+        self._popup = MainPopup(self._manager, on_settings_saved=self._restart_timer)
 
         self._setup_tray()
         self._setup_timer()
+
+        self._goal_notified_date = None
 
         self._manager.state_changed.connect(self._on_state_changed)
         self._on_state_changed()
@@ -78,6 +81,11 @@ class App:
     def _setup_timer(self):
         self._timer = QTimer()
         self._timer.timeout.connect(self._manager.check_gateway)
+        self._restart_timer()
+
+    def _restart_timer(self):
+        interval_ms = self._manager.check_interval * 1000
+        self._timer.start(interval_ms)
 
     def _on_tray_activated(self, reason):
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
@@ -87,20 +95,21 @@ class App:
         if self._popup.isVisible():
             self._popup.hide()
         else:
-            # Restart timer with current interval when showing
-            interval_ms = self._manager.check_interval * 1000
-            self._timer.start(interval_ms)
             self._popup.show_near_tray()
 
     def _show_settings(self):
         dlg = SettingsDialog(self._manager, None)
         if dlg.exec():
             self._manager.state_changed.emit()
-            interval_ms = self._manager.check_interval * 1000
-            self._timer.start(interval_ms)
+            self._restart_timer()
 
     def _on_state_changed(self):
-        if self._manager.goal_reached and self._manager.today_registered:
+        if (
+            self._manager.goal_reached
+            and self._manager.today_registered
+            and self._goal_notified_date != date.today()
+        ):
+            self._goal_notified_date = date.today()
             self._tray.showMessage(
                 "Office Days Tracker",
                 f"\u2B50 ¡Meta cumplida! ({MONTHLY_GOAL} días este mes)",

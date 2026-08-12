@@ -29,9 +29,10 @@ def _make_section(title="") -> tuple[QFrame, QVBoxLayout]:
 
 
 class MainPopup(QWidget):
-    def __init__(self, manager):
+    def __init__(self, manager, on_settings_saved=None):
         super().__init__()
         self._manager = manager
+        self._on_settings_saved = on_settings_saved
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.WindowStaysOnTopHint
@@ -128,6 +129,18 @@ class MainPopup(QWidget):
             #btnQuit:hover {
                 background: #ffe0e0;
             }
+            #headerBtn {
+                border: none;
+                background: transparent;
+                font-size: 12px;
+                color: #555;
+                padding: 2px 6px;
+                border-radius: 3px;
+            }
+            #headerBtn:hover {
+                background: #ddd;
+                color: #000;
+            }
             QCheckBox {
                 font-size: 11px;
             }
@@ -156,6 +169,20 @@ class MainPopup(QWidget):
         self._status_dot = QLabel("\u25CF")
         self._status_dot.setStyleSheet("color: #ccc; font-size: 16px;")
         hdr.addWidget(self._status_dot)
+
+        hdr.addSpacing(6)
+
+        min_btn = QPushButton("\u2013")
+        min_btn.setObjectName("headerBtn")
+        min_btn.setToolTip("Minimizar")
+        min_btn.clicked.connect(self.hide)
+        hdr.addWidget(min_btn)
+
+        close_btn = QPushButton("\u2715")
+        close_btn.setObjectName("headerBtn")
+        close_btn.setToolTip("Cerrar")
+        close_btn.clicked.connect(self.close)
+        hdr.addWidget(close_btn)
 
         root.addWidget(header)
 
@@ -388,6 +415,8 @@ class MainPopup(QWidget):
         dlg = SettingsDialog(self._manager, self)
         if dlg.exec():
             self._manager.state_changed.emit()
+            if self._on_settings_saved:
+                self._on_settings_saved()
 
     def _on_refresh(self):
         self._manager.refresh()
@@ -409,6 +438,10 @@ class MainPopup(QWidget):
         self.show()
         self.activateWindow()
         self.raise_()
+
+    def focusOutEvent(self, event):
+        self.close()
+        super().focusOutEvent(event)
 
     def mousePressEvent(self, event):
         self._drag_pos = event.globalPosition().toPoint()
