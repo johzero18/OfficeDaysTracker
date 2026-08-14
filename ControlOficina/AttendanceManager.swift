@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import Network
 import ServiceManagement
 
 struct DayRecord: Codable, Identifiable {
@@ -28,11 +29,7 @@ class AttendanceManager: ObservableObject {
             setLaunchAtLogin(launchAtLogin)
         }
     }
-    @Published var officeGateway: String = "10.15.16.1" {
-        didSet {
-            userDefaults.set(officeGateway, forKey: "officeGateway")
-        }
-    }
+    @Published private(set) var officeGateways: [String] = []
     @Published var checkInterval: Int = 3600 {
         didSet {
             userDefaults.set(checkInterval, forKey: "checkInterval")
@@ -50,15 +47,23 @@ class AttendanceManager: ObservableObject {
     private var lastHolidaysFetch: (month: Int, year: Int)?
     
     private var timer: DispatchSourceTimer?
+    private let pathMonitor = NWPathMonitor()
     private let userDefaults = UserDefaults.standard
     private let recordsKey = "attendanceRecords"
     private let holidaysCacheKey = "cachedHolidays"
+    private let officeGatewaysKey = "officeGateways"
     private let queue = DispatchQueue(label: "com.controloficina.background", qos: .utility)
     
     init() {
         // Cargar configuraciones
-        if let savedGateway = userDefaults.string(forKey: "officeGateway") {
-            officeGateway = savedGateway
+        if let savedGateways = userDefaults.stringArray(forKey: officeGatewaysKey) {
+            officeGateways = savedGateways
+        } else if let savedGateway = userDefaults.string(forKey: "officeGateway") {
+            officeGateways = [savedGateway]
+            userDefaults.set(officeGateways, forKey: officeGatewaysKey)
+        } else {
+            officeGateways = ["10.15.16.1"]
+            userDefaults.set(officeGateways, forKey: officeGatewaysKey)
         }
         checkInterval = userDefaults.integer(forKey: "checkInterval")
         if checkInterval == 0 {
@@ -68,6 +73,7 @@ class AttendanceManager: ObservableObject {
         loadMonthData()
         fetchHolidays()
         startMonitoring()
+        startNetworkMonitoring()
         loadLaunchAtLoginState()
     }
     
@@ -107,6 +113,13 @@ class AttendanceManager: ObservableObject {
         timer.resume()
         self.timer = timer
     }
+
+    private func startNetworkMonitoring() {
+        pathMonitor.pathUpdateHandler = { [weak self] _ in
+            self?.checkGateway()
+        }
+        pathMonitor.start(queue: queue)
+    }
     
     private func restartMonitoring() {
         // Cancelar el timer existente
@@ -117,80 +130,84 @@ class AttendanceManager: ObservableObject {
     
     func refreshData() {
         // Función pública para actualizar datos cuando el usuario abre el popover
+        loadMonthData()
+        fetchHolidays()
         checkGateway()
     }
     
     func checkGateway() {
         queue.async { [weak self] in
             guard let self = self else { return }
-            
-            // Obtener el gateway actual usando netstat
+
             let task = Process()
-            task.launchPath = "/usr/sbin/netstat"
+            task.executableURL = URL(fileURLWithPath: "/usr/sbin/netstat")
             task.arguments = ["-rn"]
-            
+
             let pipe = Pipe()
             task.standardOutput = pipe
             task.standardError = FileHandle.nullDevice
-            
+            var detectedGateway: String?
+
             do {
                 try task.run()
                 task.waitUntilExit()
-            
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            if let output = String(data: data, encoding: .utf8) {
-                // Buscar la línea con "default" para obtener el gateway
-                let lines = output.components(separatedBy: "\n")
-                for line in lines {
-                    if line.contains("default") {
+
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                if let output = String(data: data, encoding: .utf8) {
+                    for line in output.components(separatedBy: "\n") where line.hasPrefix("default") {
                         let components = line.split(separator: " ").map(String.init)
                         if components.count >= 2 {
-                            currentGateway = components[1]
+                            detectedGateway = components[1]
                             break
                         }
                     }
                 }
+            } catch {
+                detectedGateway = nil
             }
-        } catch {
-            self.currentGateway = nil
-        }
-        
-        // Verificar si estamos en la oficina
-        let wasConnected = self.isConnectedToOffice
-        let newConnectionStatus = self.currentGateway == self.officeGateway
-        
-        DispatchQueue.main.async {
-            self.isConnectedToOffice = newConnectionStatus
-            
-            // Si acabamos de conectarnos a la oficina, registrar el d\u00eda
-            if self.isConnectedToOffice && !self.todayRegistered {
-                self.registerToday()
-            }
-            
-            // Recargar datos del mes si cambi\u00f3 el estado
-            if self.isConnectedToOffice != wasConnected {
+
+            DispatchQueue.main.async {
+                self.currentGateway = detectedGateway
+                self.isConnectedToOffice = detectedGateway.map(self.officeGateways.contains) ?? false
                 self.loadMonthData()
+
+                if self.isConnectedToOffice && !self.todayRegistered {
+                    self.registerToday()
+                }
+
+                self.fetchHolidays()
             }
-        }
         }
     }
     
     private func registerToday() {
-        let today = Calendar.current.startOfDay(for: Date())
-        
+        setAttendance(on: Date(), attended: true)
+    }
+
+    func isRegistered(on date: Date) -> Bool {
+        loadAllRecords().contains { Calendar.current.isDate($0.date, inSameDayAs: date) }
+    }
+
+    func setAttendance(on date: Date, attended: Bool) {
+        let day = Calendar.current.startOfDay(for: date)
         var records = loadAllRecords()
-        
-        // Verificar si ya existe un registro para hoy
-        let alreadyExists = records.contains { Calendar.current.isDate($0.date, inSameDayAs: today) }
-        
-        if !alreadyExists {
-            let newRecord = DayRecord(date: today)
-            records.append(newRecord)
-            saveRecords(records)
+
+        if attended {
+            if !records.contains(where: { Calendar.current.isDate($0.date, inSameDayAs: day) }) {
+                records.append(DayRecord(date: day))
+            }
+        } else {
+            records.removeAll { Calendar.current.isDate($0.date, inSameDayAs: day) }
         }
-        
-        todayRegistered = true
+
+        saveRecords(records)
         loadMonthData()
+    }
+
+    func setOfficeGateways(_ gateways: [String]) {
+        officeGateways = Array(Set(gateways)).sorted()
+        userDefaults.set(officeGateways, forKey: officeGatewaysKey)
+        checkGateway()
     }
     
     private func loadAllRecords() -> [DayRecord] {
@@ -341,6 +358,11 @@ class AttendanceManager: ObservableObject {
         
         var workdays = 0
         
+        guard currentDay < lastDay else {
+            workdaysRemaining = 0
+            return
+        }
+
         for day in (currentDay + 1)...lastDay {
             let components = DateComponents(year: year, month: month, day: day)
             guard let date = calendar.date(from: components) else { continue }
@@ -374,5 +396,6 @@ class AttendanceManager: ObservableObject {
     
     deinit {
         timer?.cancel()
+        pathMonitor.cancel()
     }
 }

@@ -5,6 +5,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) var dismiss
     
     @State private var gatewayInput: String = ""
+    @State private var officeGateways: [String] = []
     @State private var intervalMinutes: Int = 60
     @State private var showError: Bool = false
     @State private var errorMessage: String = ""
@@ -28,31 +29,67 @@ struct SettingsView: View {
             
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    // Gateway de la oficina
+                    // Gateways de la oficina
                     VStack(alignment: .leading, spacing: 8) {
-                        Label("Gateway de la oficina", systemImage: "network")
+                        Label("Redes de oficina", systemImage: "network")
                             .font(.headline)
                         
-                        Text("Dirección IP del gateway de tu red de oficina")
+                        Text("Solo estas redes pueden registrar asistencia automáticamente")
                             .font(.caption)
                             .foregroundColor(.secondary)
+
+                        ForEach(officeGateways, id: \.self) { gateway in
+                            HStack {
+                                Image(systemName: "building.2")
+                                    .foregroundColor(.blue)
+                                Text(gateway)
+                                    .font(.system(.body, design: .monospaced))
+                                Spacer()
+                                Button {
+                                    officeGateways.removeAll { $0 == gateway }
+                                } label: {
+                                    Image(systemName: "trash")
+                                }
+                                .buttonStyle(.plain)
+                                .foregroundColor(.red)
+                                .help("Eliminar red de oficina")
+                            }
+                            .padding(.vertical, 3)
+                        }
                         
                         HStack {
                             TextField("Ej: 10.15.16.1", text: $gatewayInput)
                                 .textFieldStyle(.roundedBorder)
                                 .font(.system(.body, design: .monospaced))
-                            
-                            Button(action: detectCurrentGateway) {
+
+                            Button(action: attendanceManager.checkGateway) {
                                 Label("Detectar", systemImage: "magnifyingglass")
+                                    .font(.caption)
+                            }
+                            .buttonStyle(.bordered)
+
+                            Button(action: addGateway) {
+                                Label("Añadir", systemImage: "plus")
                                     .font(.caption)
                             }
                             .buttonStyle(.bordered)
                         }
                         
                         if let current = attendanceManager.currentGateway {
-                            Text("Gateway actual: \(current)")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
+                            HStack {
+                                Text("Gateway actual: \(current)")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                if !officeGateways.contains(current) {
+                                    Button("Usar actual") {
+                                        gatewayInput = current
+                                        addGateway()
+                                    }
+                                    .font(.caption2)
+                                    .buttonStyle(.link)
+                                }
+                            }
                         }
                     }
                     .padding()
@@ -133,9 +170,9 @@ struct SettingsView: View {
             }
             .padding()
         }
-        .frame(width: 500, height: 450)
+        .frame(width: 500, height: 520)
         .onAppear {
-            gatewayInput = attendanceManager.officeGateway
+            officeGateways = attendanceManager.officeGateways
             intervalMinutes = attendanceManager.checkInterval / 60
         }
         .alert("Error", isPresented: $showError) {
@@ -154,27 +191,38 @@ struct SettingsView: View {
         }
     }
     
-    private func detectCurrentGateway() {
-        if let current = attendanceManager.currentGateway {
-            gatewayInput = current
-        } else {
-            errorMessage = "No se pudo detectar el gateway actual"
-            showError = true
-        }
-    }
-    
-    private func saveSettings() {
-        // Validar gateway
+    private func addGateway() {
         let trimmedGateway = gatewayInput.trimmingCharacters(in: .whitespaces)
-        
+
         if !attendanceManager.validateGateway(trimmedGateway) {
             errorMessage = "La dirección IP del gateway no es válida.\nFormato: xxx.xxx.xxx.xxx"
             showError = true
             return
         }
+
+        if !officeGateways.contains(trimmedGateway) {
+            officeGateways.append(trimmedGateway)
+            officeGateways.sort()
+        }
+        gatewayInput = ""
+    }
+    
+    private func saveSettings() {
+        let trimmedGateway = gatewayInput.trimmingCharacters(in: .whitespaces)
+
+        if !trimmedGateway.isEmpty {
+            if !attendanceManager.validateGateway(trimmedGateway) {
+                errorMessage = "La dirección IP del gateway no es válida.\nFormato: xxx.xxx.xxx.xxx"
+                showError = true
+                return
+            }
+            if !officeGateways.contains(trimmedGateway) {
+                officeGateways.append(trimmedGateway)
+            }
+        }
         
         // Guardar configuraciones
-        attendanceManager.officeGateway = trimmedGateway
+        attendanceManager.setOfficeGateways(officeGateways)
         attendanceManager.checkInterval = max(60, intervalMinutes * 60) // Mínimo 1 minuto
         
         dismiss()

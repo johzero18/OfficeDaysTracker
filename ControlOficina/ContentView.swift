@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var attendanceManager = AttendanceManager()
     @State private var showingSettings = false
+    @State private var showingRecordsEditor = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -135,9 +136,19 @@ struct ContentView: View {
                     
                     // Lista de días registrados este mes
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Días registrados")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        HStack {
+                            Text("Días registrados")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Button {
+                                showingRecordsEditor = true
+                            } label: {
+                                Label("Editar", systemImage: "pencil")
+                                    .font(.caption)
+                            }
+                            .buttonStyle(.plain)
+                        }
                         
                         let records = attendanceManager.getRecordsForCurrentMonth()
                         if records.isEmpty {
@@ -178,7 +189,7 @@ struct ContentView: View {
                 // Auto-inicio
                 HStack {
                     Toggle(isOn: $attendanceManager.launchAtLogin) {
-                        Text("Iniciar al encender la PC")
+                        Text("Iniciar sesión en el Mac")
                             .font(.caption)
                     }
                     .toggleStyle(.checkbox)
@@ -227,6 +238,9 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView(attendanceManager: attendanceManager)
+        }
+        .sheet(isPresented: $showingRecordsEditor) {
+            RecordsEditorView(attendanceManager: attendanceManager)
         }
     }
     

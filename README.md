@@ -6,7 +6,7 @@ App nativa de macOS para controlar tu asistencia a la oficina mediante detecció
 
 - 🖥️ **App de barra de menú**: Se muestra en la barra superior de macOS
 - 🌐 **Detección automática de red**: Detecta el gateway de la red de tu oficina
-- ⚙️ **Gateway configurable**: Personaliza la dirección IP del gateway de tu oficina
+- ⚙️ **Redes configurables**: Guarda varios gateways de oficina para registrar solo en esas redes
 - ⏱️ **Intervalo ajustable**: Configura cada cuánto tiempo verificar la conexión (de 1 minuto a 24 horas)
 - 📅 **Registro diario**: Registra automáticamente cada día que asistes a la oficina
 - 📊 **Meta mensual**: Muestra tu progreso hacia la meta de 8 días al mes
@@ -22,7 +22,7 @@ App nativa de macOS para controlar tu asistencia a la oficina mediante detecció
 ### 🍺 Instalación con Homebrew (Recomendado)
 
 ```bash
-brew tap TU_USUARIO/tap
+brew tap johzero18/tap
 brew install --cask officedaystracker
 ```
 
@@ -57,8 +57,8 @@ brew upgrade --cask officedaystracker
 3. **🔄 Actualizar**: Fuerza la verificación del gateway inmediatamente sin esperar al intervalo programado
 4. **⚙️ Configuración**: Personaliza tu instalación
    - Haz clic en **"Configuración"** en el menú
-   - Configura la dirección IP del gateway de tu oficina (por defecto: 10.15.16.1)
-   - Usa el botón **"Detectar"** para autodetectar el gateway actual
+   - Configura los gateways de las redes de tu oficina
+   - Usa **"Detectar"** y luego **"Usar actual"** para guardar el gateway actual
    - Ajusta el intervalo de chequeo (desde 1 minuto hasta 24 horas)
    - Usa los presets rápidos: 5 min, 15 min, 30 min, 1 hora
 5. Activa **"Iniciar al encender la PC"** para que la app se ejecute automáticamente
